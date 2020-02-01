@@ -185,6 +185,7 @@ void Block() : { }
 }
 
 
+
 void Stmt() : { }
 {
 	AssignStmt() <SEMICOLON> | WhileStmt() | doStmt() | ifStmt() | SwitchStmt()
@@ -195,30 +196,64 @@ void AssignStmt() : { Token t;}
 	Identifier() <ASSIGN> IntExpr()
 }
 
-
 void Expr() : {}
 {
     IntExpr()
 }
 
+
 void IntExpr() : {}
 {
-    IntAddExpr()
+    LogicExpr()
+}
+//TODO
+void LogicExpr():{ Token t;}{
+    ComparisonExpr()(LOOKAHEAD(2)
+            <LOGIC> ComparisonExpr()
+        )*
+}
+
+void ComparisonExpr():{ Token t;}{
+    IntAddExpr() (LOOKAHEAD(2)
+            <COMPARE> IntAddExpr()
+        )*
 }
 
 void IntAddExpr() : { Token t;}
 {
-    IntBasicExpr() (LOOKAHEAD(2)
-        (t = <PLUS> | t = <MINUS>) IntBasicExpr()
+    IntMultExpr() (LOOKAHEAD(2)
+        (t = <PLUS> | t = <MINUS>) IntMultExpr()
     )*
 }
+
+
+void IntMultExpr() : { Token t;}
+{
+    IntNegExpr() (LOOKAHEAD(2)
+        (t = <FOIS>) IntNegExpr()
+    )*
+}
+
+void IntNegExpr() : {}
+{
+    [<MINUS>] (LogicNotExpr())
+}
+
+void LogicNotExpr() : {}
+{
+    [<NOT>](ParenthesesExpr())
+}
+
+void ParenthesesExpr():{}{
+    <LPAREN>IntExpr()<RPAREN> | IntBasicExpr()
+}
+
 
 void IntBasicExpr() : {}
 {
 	LOOKAHEAD(2) Identifier() |
 	IntValue()
 }
-
 
 
 void Identifier() : { Token t;}
@@ -235,3 +270,4 @@ void RealValue() : { Token t;}
 {
 	t = <REAL> {jjtThis.setValue(Double.parseDouble(t.image));}
 }
+
