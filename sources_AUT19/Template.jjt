@@ -111,7 +111,7 @@ TOKEN :
 
 	< PLUS: "+" > |
 	< MINUS: "-" > |
-	< FOIS: "*" > |
+	< MUL: "*" > |
 	< DIV: "/" > |
     < NOT: "!" > |
 
@@ -137,7 +137,7 @@ TOKEN :
 	< #DIGIT: ["0"-"9"] > |
 	< INTEGER: ["1"-"9"] (["0"-"9"])* | "0" > |
 	// // Caution! Allows numbers such as "0000.23"
-	< REAL: ((<INTEGER>)* "." (<INTEGER>)* )|(<DIGIT>"."(<INTEGER>)*["1"-"9"]"e"["-"]<INTEGER>)>//TODO
+	< REAL: ((<INTEGER>)* "." (<INTEGER>)* )|(<INTEGER>"."(<INTEGER>)*["1"-"9"]("e" | "E") (["-"] | ["+"])<INTEGER>)>//TODO
 }
 
 
@@ -150,25 +150,23 @@ TOKEN :
 // SYNTAX ANALYSIS
 //\
 
-void WhileStmt() : {}
-{
-    <WHILE><LPAREN> Expr() <RPAREN>(<LACC> Block()<RACC> | Stmt() )
+void WhileStmt() : { } {
+    <WHILE><LPAREN> Expr() <RPAREN>(<LACC> Block() <RACC> | Stmt() )
 }
 
-void doStmt() : {}
-{
-    <DO><LACC> Block()<RACC> <WHILE><LPAREN> Expr() <RPAREN><SEMICOLON>
+void DoStmt() : { } {
+    <DO><LACC> Block() <RACC> <WHILE><LPAREN> Expr() <RPAREN><SEMICOLON>
 }
 
-void ifStmt():{}{
-    <IF><LPAREN>Expr()<RPAREN>(<LACC> Block()<RACC> | Stmt() )
-    [LOOKAHEAD(1)<ELSE>(<LACC> Block()<RACC> | Stmt() )]
+void IfStmt() : { } {
+    <IF><LPAREN> Expr() <RPAREN>(<LACC> Block() <RACC> | Stmt() )
+    ([LOOKAHEAD(1)<ELSE>(<LACC> Block() <RACC> | Stmt() )])#Else(>0)
 }
 
-void SwitchStmt():{}{
+void SwitchStmt() : { } {
     <SWITCH><LPAREN> Expr() <RPAREN><LACC>
-    (<CASE>Expr()<COLON>Stmt())+
-    [<SWTDEFAULT><COLON>Stmt()]<RACC>
+    ((<CASE> Expr() <COLON> Stmt() )#Case)+
+    [<SWTDEFAULT><COLON> Stmt() ]#Default(>0)<RACC>
 }
 
 
@@ -179,80 +177,79 @@ ASTProgram Program() : { }
 	Block() <EOF> { return jjtThis;  }
 }
 
-void Block() : { }
+void Block() #void : { }
 {
 	 ( Stmt() )*
 }
 
 
 
-void Stmt() : { }
+void Stmt() #void : { }
 {
-	AssignStmt() <SEMICOLON> | WhileStmt() | doStmt() | ifStmt() | SwitchStmt()
+	AssignStmt() <SEMICOLON> | WhileStmt() | DoStmt() | IfStmt() | SwitchStmt()
 }
 
-void AssignStmt() : { Token t;}
+void AssignStmt() : { Token t; }
 {
 	Identifier() <ASSIGN> IntExpr()
 }
 
-void Expr() : {}
+void Expr() : { }
 {
     IntExpr()
 }
 
 
-void IntExpr() : {}
+void IntExpr() #void : { }
 {
     LogicExpr()
 }
 //TODO
-void LogicExpr():{ Token t;}{
-    ComparisonExpr()(LOOKAHEAD(2)
-            <LOGIC> ComparisonExpr()
-        )*
+void LogicExpr() #void : { Token t; } {
+    ComparisonExpr() ((LOOKAHEAD(2)
+        <LOGIC> ComparisonExpr()
+    )* )#AND_OR(>0)
 }
 
-void ComparisonExpr():{ Token t;}{
-    IntAddExpr() (LOOKAHEAD(2)
-            <COMPARE> IntAddExpr()
-        )*
+void ComparisonExpr() #void : { Token t; }{
+    IntAddExpr() ((LOOKAHEAD(2)
+        <COMPARE> IntAddExpr()
+    )* )#Compare(>0)
 }
 
-void IntAddExpr() : { Token t;}
+void IntAddExpr() #void: { Token t; }
 {
-    IntMultExpr() (LOOKAHEAD(2)
-        (t = <PLUS> | t = <MINUS>) IntMultExpr()
-    )*
+    (MultExpr() (LOOKAHEAD(2)
+        (t = <PLUS> | t = <MINUS>) MultExpr()
+    )* )#AddOrSub(>1)
 }
 
 
-void IntMultExpr() : { Token t;}
+void MultExpr() #void : { Token t; }
 {
-    IntNegExpr() (LOOKAHEAD(2)
-        (t = <FOIS>) IntNegExpr()
-    )*
+    (NegExpr() (LOOKAHEAD(2)
+        (t = <MUL> | t = <DIV>) NegExpr()
+    )* )#MultOrDiv(>1)
 }
 
-void IntNegExpr() : {}
+void NegExpr() #void : { }
 {
-    [<MINUS>] (LogicNotExpr())
+    [<MINUS>] ( LogicNotExpr() )
 }
 
-void LogicNotExpr() : {}
+void LogicNotExpr() #void : { }
 {
-    [<NOT>](ParenthesesExpr())
+    [<NOT>] ( ParenthesesExpr() )
 }
 
-void ParenthesesExpr():{}{
-    <LPAREN>IntExpr()<RPAREN> | IntBasicExpr()
+void ParenthesesExpr() #void : { } {
+    (<LPAREN> IntExpr() <RPAREN>)#ParenExpr | BasicExpr()
 }
 
 
-void IntBasicExpr() : {}
+void BasicExpr() #void : { }
 {
-	LOOKAHEAD(2) Identifier() |
-	IntValue()
+	LOOKAHEAD(2) Identifier() | IntValue() | RealValue()
 }
 
 
