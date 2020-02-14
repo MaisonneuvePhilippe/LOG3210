@@ -1,7 +1,7 @@
 # TP1 - INF3210
 ###### 01/02/2020
 ##### Nicole Joyal - 1794431
-##### Philippe Maisonneuve - 
+##### Philippe Maisonneuve - 1959052
 ##### Soumis à : Doriane Olewicki
 
 #### Réduction d'arbres
