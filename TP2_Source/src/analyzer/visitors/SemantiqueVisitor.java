@@ -30,6 +30,8 @@ public class SemantiqueVisitor implements ParserVisitor {
         m_writer = writer;
     }
 
+
+
     /*
     Le Visiteur doit lancer des erreurs lorsqu'un situation arrive.
 
@@ -59,7 +61,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     public Object visit(ASTProgram node, Object data) {
         node.childrenAccept(this, data);
         m_writer.print(String.format("{VAR:%d, WHILE:%d, IF:%d, OP:%d}", this.VAR, this.WHILE, this.IF, this.OP));
-
         return null;
     }
 
@@ -69,7 +70,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTDeclaration node, Object data) {
         String varName = ((ASTIdentifier) node.jjtGetChild(0)).getValue();
-
 
         if (SymbolTable.containsKey(varName)) {
             throw new SemantiqueError("Identifier " + varName + " has multiple declarations");
@@ -83,7 +83,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTBlock node, Object data) {
         node.childrenAccept(this, data);
-        //this.OP++;
         return null;
     }
 
@@ -91,7 +90,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTStmt node, Object data) {
         node.childrenAccept(this, data);
-
         return null;
     }
 
@@ -103,12 +101,8 @@ public class SemantiqueVisitor implements ParserVisitor {
         if (!estCompatible(exprType, VarType.Bool)) {
             throw new SemantiqueError("Invalid type in condition.");
         }
-        int numChildren = node.jjtGetNumChildren();
-        for (int i = 1; i < numChildren; i++) {
-            d = new DataStruct();
-            node.jjtGetChild(i).jjtAccept(this, d);
-        }
-        //this.OP++;
+
+
     }
 
     /*
@@ -119,7 +113,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     public Object visit(ASTIfStmt node, Object data) {
         callChildenCond(node);
         this.IF++;
-
         return null;
     }
 
@@ -127,7 +120,6 @@ public class SemantiqueVisitor implements ParserVisitor {
     public Object visit(ASTWhileStmt node, Object data) {
         callChildenCond(node);
         this.WHILE++;
-
         return null;
     }
 
@@ -158,24 +150,45 @@ public class SemantiqueVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTCompExpr node, Object data) {
-        node.childrenAccept(this, data);
-        DataStruct d1 = new DataStruct();
-        node.jjtGetChild(0).jjtAccept(this, d1);
-        DataStruct d2 = new DataStruct();
-        if (node.jjtGetNumChildren() > 1) {
-            node.jjtGetChild(1).jjtAccept(this, d2);
-            if (!estCompatible(d1.type, d2.type)) {
-                throw new SemantiqueError("Invalid type in expression.");
-            } else if (estCompatible(d1.type, VarType.Bool) && (!node.getValue().equals("==") &&
-                    !node.getValue().equals("!=")) && !node.getValue().equals("||")) {
-                throw new SemantiqueError("Invalid type in expression.");
+        String nodeValue = node.getValue();
+        int numChildren = node.jjtGetNumChildren();
 
+        if (numChildren > 1 && nodeValue != null) {
+            if (nodeValue.equals("<") || nodeValue.equals(">") || nodeValue.equals("<=") || nodeValue.equals(">=") ) {
+                DataStruct d;
+                for (int i = 0; i < numChildren; i++) {
+                    d = new DataStruct();
+                    node.jjtGetChild(i).jjtAccept(this, d);
+                    VarType exprType = d.type;
+
+                    if (exprType != VarType.Number) {
+                        throw new SemantiqueError("Invalid type in expression.");
+                    }
+                }
+                ((DataStruct) data).type = VarType.Bool;
+            } else if (nodeValue.equals("==") || nodeValue.equals("!=")) {
+                DataStruct d = new DataStruct();
+                node.jjtGetChild(0).jjtAccept(this, d);
+                VarType exprType = d.type;
+
+                for (int i = 1; i < numChildren; i++) {
+                    d = new DataStruct();
+                    node.jjtGetChild(i).jjtAccept(this, d);
+                    VarType exprTypeNext = d.type;
+
+                    if (exprType != exprTypeNext) {
+                        throw new SemantiqueError("Invalid type in expression.");
+                    }
+                }
+                ((DataStruct) data).type = VarType.Bool;
             }
             this.OP++;
+        } else {
+            node.childrenAccept(this, data);
         }
-
         return null;
     }
+
 
     @Override
     public Object visit(ASTAddExpr node, Object data) {
@@ -188,8 +201,8 @@ public class SemantiqueVisitor implements ParserVisitor {
             if (!estCompatible(d1.type, d2.type)) {
                 throw new SemantiqueError("Invalid type in expression.");
             }
-
             this.OP++;
+
         }
         return null;
     }
@@ -205,16 +218,36 @@ public class SemantiqueVisitor implements ParserVisitor {
             if (!estCompatible(d1.type, d2.type)) {
                 throw new SemantiqueError("Invalid type in expression.");
             }
-
             this.OP++;
+
+
         }
         return null;
     }
 
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
-        node.childrenAccept(this, data);
+        int numChildren = node.jjtGetNumChildren();
 
+        if (numChildren > 1) {
+
+            DataStruct d;
+            for (int i = 0; i < numChildren; i++) {
+                d = new DataStruct();
+                node.jjtGetChild(i).jjtAccept(this, d);
+                VarType exprType = d.type;
+
+                if (exprType != VarType.Bool) {
+                    throw new SemantiqueError("Invalid type in expression.");
+                }
+
+            }
+            ((DataStruct) data).type = VarType.Bool;
+            this.OP++;
+        }
+        else {
+            node.childrenAccept(this, data);
+        }
         return null;
     }
 
@@ -242,6 +275,7 @@ public class SemantiqueVisitor implements ParserVisitor {
                     throw new SemantiqueError("Invalid type in expression.");
                 }
             }
+            this.OP++;
         }
 
         return null;
@@ -257,6 +291,7 @@ public class SemantiqueVisitor implements ParserVisitor {
             if (!estCompatible(exprType, VarType.Number)) {
                 throw new SemantiqueError("Invalid type in expression.");
             }
+            this.OP++;
         }
 
         return null;
