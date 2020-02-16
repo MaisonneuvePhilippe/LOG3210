@@ -101,8 +101,6 @@ public class SemantiqueVisitor implements ParserVisitor {
         if (!estCompatible(exprType, VarType.Bool)) {
             throw new SemantiqueError("Invalid type in condition.");
         }
-
-
     }
 
     /*
@@ -137,7 +135,6 @@ public class SemantiqueVisitor implements ParserVisitor {
         if (!estCompatible(varType, exprType)) {
             throw new SemantiqueError("Invalid type in assignation of Identifier " + varName);
         }
-
         return null;
 
     }
@@ -161,7 +158,7 @@ public class SemantiqueVisitor implements ParserVisitor {
                     node.jjtGetChild(i).jjtAccept(this, d);
                     VarType exprType = d.type;
 
-                    if (exprType != VarType.Number) {
+                    if (!estCompatible(exprType, VarType.Number)) {
                         throw new SemantiqueError("Invalid type in expression.");
                     }
                 }
@@ -176,7 +173,7 @@ public class SemantiqueVisitor implements ParserVisitor {
                     node.jjtGetChild(i).jjtAccept(this, d);
                     VarType exprTypeNext = d.type;
 
-                    if (exprType != exprTypeNext) {
+                    if (!estCompatible(exprType, exprTypeNext)) {
                         throw new SemantiqueError("Invalid type in expression.");
                     }
                 }
@@ -202,7 +199,6 @@ public class SemantiqueVisitor implements ParserVisitor {
                 throw new SemantiqueError("Invalid type in expression.");
             }
             this.OP++;
-
         }
         return null;
     }
@@ -219,8 +215,6 @@ public class SemantiqueVisitor implements ParserVisitor {
                 throw new SemantiqueError("Invalid type in expression.");
             }
             this.OP++;
-
-
         }
         return null;
     }
@@ -230,17 +224,15 @@ public class SemantiqueVisitor implements ParserVisitor {
         int numChildren = node.jjtGetNumChildren();
 
         if (numChildren > 1) {
-
             DataStruct d;
             for (int i = 0; i < numChildren; i++) {
                 d = new DataStruct();
                 node.jjtGetChild(i).jjtAccept(this, d);
                 VarType exprType = d.type;
 
-                if (exprType != VarType.Bool) {
+                if (!estCompatible(exprType, VarType.Bool)) {
                     throw new SemantiqueError("Invalid type in expression.");
                 }
-
             }
             ((DataStruct) data).type = VarType.Bool;
             this.OP++;
