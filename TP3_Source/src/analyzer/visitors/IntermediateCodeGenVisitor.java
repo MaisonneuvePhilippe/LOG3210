@@ -289,8 +289,6 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
-
-<<<<<<< Updated upstream
         for(int i =0; i<node.getOps().size();i++){
 
             if(node.getOps().get(0).toString().equals("||")){
@@ -303,12 +301,6 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
                 else {
                     m_writer.println(genLabel());
                 }
-=======
-        if (node.jjtGetNumChildren() >1) {
-            for(int i =1; i<node.jjtGetNumChildren(); i++){
->>>>>>> Stashed changes
-
-
             }
             else if(node.getOps().get(0).toString().equals("&&")){
                 m_writer.println("and");
