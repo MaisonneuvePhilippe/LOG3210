@@ -246,14 +246,17 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
     //chercher un deuxième noeud enfant pour avoir une valeur puisqu'il s'agit d'une opération unaire.
     @Override
     public Object visit(ASTUnaExpr node, Object data) {
-//        node.childrenAccept(this, data);
-//        String newID = genId();
-//        m_writer.println(newID + " = " + node.);
-//        m_writer.println(node.getId() + " = " + newID);
-//        return null;
 
+        String addr = (String) node.jjtGetChild(0).jjtAccept(this, data);
+        if (node.getOps().size() > 0) {
+            for (int i = 0; i < node.getOps().size(); i++) {
+                String t = genId();
+                m_writer.println(t + " = - " + addr);
+                addr = t;
+            }
+        }
+        return addr;
 
-        return node.jjtGetChild(0).jjtAccept(this,data);
     }
 
     //expression logique
