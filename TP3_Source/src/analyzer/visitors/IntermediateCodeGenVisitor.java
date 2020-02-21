@@ -270,11 +270,28 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
 
-        if (node.jjtGetNumChildren() >1) {
-            for(int i =1; i<node.jjtGetNumChildren();i++){
+        for(int i =0; i<node.getOps().size();i++){
+
+            if(node.getOps().get(0).toString().equals("||")){
+
+
+                if (node.jjtGetChild(0).jjtAccept(this, data).equals("true")){
+                    //true
+
+                }
+                else {
+                    m_writer.println(genLabel());
+                }
 
 
             }
+            else if(node.getOps().get(0).toString().equals("&&")){
+                m_writer.println("and");
+            }
+            else if(node.getOps().get(0).toString().equals("!")){
+                m_writer.println("not");
+            }
+
         }
         return  "" + node.jjtGetChild(0).jjtAccept(this,data);
     }
