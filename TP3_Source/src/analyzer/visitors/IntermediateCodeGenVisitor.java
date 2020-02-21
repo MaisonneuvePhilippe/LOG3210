@@ -94,13 +94,33 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTIfStmt node, Object data) {
-        node.childrenAccept(this, data);
+        if (node.jjtGetNumChildren() == 3) {
+            String S = genLabel();
+            String labelS1 = genLabel();
+            String B = (String) node.jjtGetChild(0).jjtAccept(this, data);
+            m_writer.println("if " + B + " == 1 goto " + S);
+            m_writer.println("goto " + labelS1);
+            m_writer.println(S);
+            String S1 = (String) node.jjtGetChild(1).jjtAccept(this, data);
+            S = labelS1;
+            String labelS2 = genLabel();
+            m_writer.println("goto " + labelS2);
+            m_writer.println(labelS1);
+            String S2 = (String) node.jjtGetChild(2).jjtAccept(this, data);
+            m_writer.println(labelS2);
+        } else if (node.jjtGetNumChildren() == 2) {
+            String S = genLabel();
+            String B = (String) node.jjtGetChild(0).jjtAccept(this, data);
+            m_writer.println("if " + B + " goto " + S);
+        }
+//        node.childrenAccept(this, data);
         return null;
     }
 
     @Override
     public Object visit(ASTWhileStmt node, Object data) {
         node.childrenAccept(this, data);
+
         return null;
     }
 
@@ -270,6 +290,7 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
 
+<<<<<<< Updated upstream
         for(int i =0; i<node.getOps().size();i++){
 
             if(node.getOps().get(0).toString().equals("||")){
@@ -282,6 +303,10 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
                 else {
                     m_writer.println(genLabel());
                 }
+=======
+        if (node.jjtGetNumChildren() >1) {
+            for(int i =1; i<node.jjtGetNumChildren(); i++){
+>>>>>>> Stashed changes
 
 
             }
