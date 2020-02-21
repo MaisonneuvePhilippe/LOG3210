@@ -214,19 +214,30 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
     la taille de ops sera toujours 1 de moins que la taille de jjtGetNumChildren
      */
     public Object exprCodeGen(SimpleNode node, Object data, Vector<String> ops) {
-        return node.jjtGetChild(0).jjtAccept(this,data);
+        String addr1 = (String) node.jjtGetChild(0).jjtAccept(this,data);
+        if (node.jjtGetNumChildren() >1) {
+            for(int i =1; i<node.jjtGetNumChildren();i++){
+                String addr2 = (String) node.jjtGetChild(i).jjtAccept(this,data);
+                String t = genId();
+
+                m_writer.println(t + " = " + addr1 + " " + ops.get(i-1) + " " + addr2);
+                addr1=t;
+
+            }
+        }
+
+
+        return addr1;
     }
 
     @Override
     public Object visit(ASTAddExpr node, Object data) {
-
         return exprCodeGen(node, data, node.getOps());
 
     }
 
     @Override
     public Object visit(ASTMulExpr node, Object data) {
-
         return exprCodeGen(node, data, node.getOps());
 
     }
@@ -240,6 +251,8 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
 //        m_writer.println(newID + " = " + node.);
 //        m_writer.println(node.getId() + " = " + newID);
 //        return null;
+
+
         return node.jjtGetChild(0).jjtAccept(this,data);
     }
 
@@ -253,7 +266,14 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
-        return node.jjtGetChild(0).jjtAccept(this,data);
+
+        if (node.jjtGetNumChildren() >1) {
+            for(int i =1; i<node.jjtGetNumChildren();i++){
+
+
+            }
+        }
+        return  "" + node.jjtGetChild(0).jjtAccept(this,data);
     }
 
 
@@ -331,6 +351,7 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTIntValue node, Object data) {
+
         return ""+node.getValue();
     }
 
