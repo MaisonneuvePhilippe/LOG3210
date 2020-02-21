@@ -5,6 +5,7 @@ import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 import sun.awt.Symbol;
 
+import javax.swing.plaf.basic.BasicInternalFrameTitlePane;
 import java.awt.*;
 import java.io.PrintWriter;
 import java.util.HashMap;
@@ -190,20 +191,18 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTAssignStmt node, Object data) {
-        String stmt = node.jjtGetChild(0).toString()+ " = ";
-        stmt += node.jjtGetChild(1).jjtAccept(this, data);
+        String id   = ((ASTIdentifier) node.jjtGetChild(0)).getValue();
+        String addr = (String) node.jjtGetChild(1).jjtAccept(this, data);
 
-        node.childrenAccept(this, data);
-        m_writer.println(stmt);
-        return stmt;
+        m_writer.println(id + " = " + addr);
+        return null;
     }
 
 
     //Il n'y a probablement rien à faire ici
     @Override
     public Object visit(ASTExpr node, Object data){
-        node.childrenAccept(this, data);
-        return null;
+        return node.jjtGetChild(0).jjtAccept(this,data);
     }
 
     //Expression arithmétique
@@ -214,29 +213,34 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
     On peut bouclé sur "ops" ou sur node.jjtGetNumChildren(),
     la taille de ops sera toujours 1 de moins que la taille de jjtGetNumChildren
      */
-    public String exprCodeGen(SimpleNode node, Object data, Vector<String> ops) {
-        node.childrenAccept(this, data);
-        return null;
+    public Object exprCodeGen(SimpleNode node, Object data, Vector<String> ops) {
+        return node.jjtGetChild(0).jjtAccept(this,data);
     }
 
     @Override
     public Object visit(ASTAddExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+
+        return exprCodeGen(node, data, node.getOps());
+
     }
 
     @Override
     public Object visit(ASTMulExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+
+        return exprCodeGen(node, data, node.getOps());
+
     }
 
     //UnaExpr est presque pareil au deux précédente. la plus grosse différence est qu'il ne va pas
     //chercher un deuxième noeud enfant pour avoir une valeur puisqu'il s'agit d'une opération unaire.
     @Override
     public Object visit(ASTUnaExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+//        node.childrenAccept(this, data);
+//        String newID = genId();
+//        m_writer.println(newID + " = " + node.);
+//        m_writer.println(node.getId() + " = " + newID);
+//        return null;
+        return node.jjtGetChild(0).jjtAccept(this,data);
     }
 
     //expression logique
@@ -249,9 +253,7 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
-        node.childrenAccept(this, data);
-
-        return null;
+        return node.jjtGetChild(0).jjtAccept(this,data);
     }
 
 
@@ -288,8 +290,7 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTCompExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        return node.jjtGetChild(0).jjtAccept(this,data);
     }
 
 
@@ -300,16 +301,12 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTNotExpr node, Object data) {
-        node.childrenAccept(this, data);
-
-
-        return null;
+        return node.jjtGetChild(0).jjtAccept(this,data);
     }
 
     @Override
     public Object visit(ASTGenValue node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        return node.jjtGetChild(0).jjtAccept(this,data);
     }
 
     /*
@@ -318,8 +315,7 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTBoolValue node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        return ""+node.getValue();
     }
 
 
@@ -330,14 +326,12 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTIdentifier node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        return node.getValue();
     }
 
     @Override
     public Object visit(ASTIntValue node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        return ""+node.getValue();
     }
 
 
