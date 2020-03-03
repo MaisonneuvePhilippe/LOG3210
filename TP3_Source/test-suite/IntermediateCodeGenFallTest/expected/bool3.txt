@@ -1,8 +1,6 @@
-if 3 > 2 goto _L0
+ifFalse 3 > 2 goto _L0
+a = 1
 goto _L1
 _L0
-a = 1
-goto _L2
-_L1
 a = 0
-_L2
+_L1

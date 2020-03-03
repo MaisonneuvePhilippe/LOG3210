@@ -96,31 +96,52 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
     public Object visit(ASTIfStmt node, Object data) {
         if (node.jjtGetNumChildren() == 3) {
             String S = genLabel();
-            String labelS1 = genLabel();
             String B = (String) node.jjtGetChild(0).jjtAccept(this, data);
-            m_writer.println("if " + B + " == 1 goto " + S);
-            m_writer.println("goto " + labelS1);
+            m_writer.println("if " + B + " goto " + S);
+            String bTrue = genLabel();
+            String bFalse = genLabel();
+            m_writer.println("goto " + bTrue);
             m_writer.println(S);
             String S1 = (String) node.jjtGetChild(1).jjtAccept(this, data);
-            S = labelS1;
-            String labelS2 = genLabel();
-            m_writer.println("goto " + labelS2);
-            m_writer.println(labelS1);
+            S = bTrue;
+            m_writer.println("goto " + bFalse);
+            m_writer.println(bTrue);
             String S2 = (String) node.jjtGetChild(2).jjtAccept(this, data);
-            m_writer.println(labelS2);
+            m_writer.println(bFalse);
         } else if (node.jjtGetNumChildren() == 2) {
             String S = genLabel();
             String B = (String) node.jjtGetChild(0).jjtAccept(this, data);
             m_writer.println("if " + B + " goto " + S);
+            String bTrue = genLabel();
+            m_writer.println("goto " + bTrue);
+            String bFalse = (String) node.jjtGetChild(1).jjtAccept(this, data);
+            m_writer.println(bFalse);
         }
-//        node.childrenAccept(this, data);
         return null;
     }
 
     @Override
     public Object visit(ASTWhileStmt node, Object data) {
+        String sNext = genLabel();
+        String begin = genLabel();
+        String bFalse = genLabel();
+        String bTrue = genLabel();
+        m_writer.println(sNext);
+        String B = (String) node.jjtGetChild(0).jjtAccept(this, data);
+        if (!B.equals("true") && !B.equals("false")) {
+            m_writer.println("if " + B + " goto " + bTrue);
+            m_writer.println("goto " + bFalse);
+            m_writer.println(bTrue);
+        }
+        if (B.equals("false")) {
+            m_writer.println("goto " + bFalse);
+        } else {
+            m_writer.println("goto " + begin);
+        }
+        m_writer.println(begin);
         node.childrenAccept(this, data);
-
+        m_writer.println("goto " + sNext);
+        m_writer.println(bFalse);
         return null;
     }
 
@@ -214,6 +235,11 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
         String id   = ((ASTIdentifier) node.jjtGetChild(0)).getValue();
         String addr = (String) node.jjtGetChild(1).jjtAccept(this, data);
 
+        if (addr.equals("true")) {
+            addr =  "1";
+        } else if (addr.equals("false")) {
+            addr = "0";
+        }
         m_writer.println(id + " = " + addr);
         return null;
     }
@@ -289,24 +315,31 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
-        for(int i =0; i<node.getOps().size();i++){
-
-            if(node.getOps().get(0).toString().equals("||")){
-
-
-                if (node.jjtGetChild(0).jjtAccept(this, data).equals("true")){
-                    //true
-
-                }
-                else {
+        for(int i = 0; i < node.getOps().size(); i++){
+            if(node.getOps().get(i).toString().equals("||")) {
+                String B1 = (String) node.jjtGetChild(0).jjtAccept(this, data);
+                String B2 = (String) node.jjtGetChild(1).jjtAccept(this, data);
+                if (B1.equals("true") || B2.equals("true")) {
+                    String bTrue = genLabel();
+                    String bFalse = genLabel();
+                    String end = genLabel();
+                    String last = genLabel();
+                    m_writer.println("goto " + bTrue);
+                    m_writer.println(last);
+                    m_writer.println("goto " + bFalse);
+                    m_writer.println(bTrue);
+                    m_writer.println(node.jjtGetChild(0).jjtAccept(this, data));
+                    m_writer.println("goto " + end);
+                    m_writer.println(bFalse);
+                    m_writer.println(node.jjtGetChild(1).jjtAccept(this, data));
+                    m_writer.println(end);
+                } else {
                     m_writer.println(genLabel());
                 }
             }
             else if(node.getOps().get(0).toString().equals("&&")){
-                m_writer.println("and");
             }
             else if(node.getOps().get(0).toString().equals("!")){
-                m_writer.println("not");
             }
 
         }
@@ -347,7 +380,29 @@ public class IntermediateCodeGenVisitor implements ParserVisitor {
      */
     @Override
     public Object visit(ASTCompExpr node, Object data) {
-        return node.jjtGetChild(0).jjtAccept(this,data);
+        boolean isNumberComp = false;
+        for (int i = 1; i < node.jjtGetNumChildren(); i++) {
+            if (node.jjtGetChild(i).jjtAccept(this, data) != null) {
+                isNumberComp = true;
+                break;
+            }
+        }
+        Object temp = node.jjtGetChild(0).jjtAccept(this, data);
+
+        if (isNumberComp) {
+            genCodeRelTestJump(genLabel(), genLabel(), (String) node.jjtGetChild(0).jjtAccept(this,data));
+        } else {
+            Object temp2 = null;
+            if (node.jjtGetNumChildren() > 1) {
+                temp2 = node.jjtGetChild(1).jjtAccept(this, data);
+                String label1 = genLabel();
+                String label2 = genLabel();
+                genCodeRelTestJump(label1, label2, (String) temp);
+                genCodeRelTestJump(label1, label2, (String) temp2);
+            }
+        }
+
+        return temp;
     }
 
 
