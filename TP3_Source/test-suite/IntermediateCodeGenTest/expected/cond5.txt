@@ -1,6 +1,5 @@
 a = 10
 _L0
-goto _L1
 goto _L2
 _L1
 _t0 = a - 1
