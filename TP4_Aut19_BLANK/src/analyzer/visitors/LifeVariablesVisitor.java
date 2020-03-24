@@ -1,18 +1,13 @@
 package analyzer.visitors;
 
 import analyzer.ast.*;
-import com.sun.org.apache.xpath.internal.operations.Bool;
-import sun.tools.java.Identifier;
 
-import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.ArrayList;
-import java.util.Stack;
 import java.util.List;
 import java.util.Collections;
-import java.util.function.Predicate;
 
 
 /**
@@ -124,7 +119,6 @@ public class LifeVariablesVisitor implements ParserVisitor {
         }
 
         previous_step = (HashSet<String>) if_previous_step.clone();
-        //node.childrenAccept(this, data);
         return null;
     }
 
@@ -139,6 +133,8 @@ public class LifeVariablesVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTAssignStmt node, Object data) {
         node.childrenAccept(this, data);
+        allSteps.get("_step" + (step - 1)).DEF.add(((ASTIdentifier) node.jjtGetChild(0)).getValue());
+        getRefs(node, data);
         return null;
     }
 
@@ -151,44 +147,45 @@ public class LifeVariablesVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTAddExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        getRefs(node, data);
+        return node.jjtGetChild(0).jjtAccept(this, data);
     }
 
     @Override
     public Object visit(ASTMulExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        getRefs(node, data);
+        return node.jjtGetChild(0).jjtAccept(this, data);
     }
 
     @Override
     public Object visit(ASTUnaExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        Object visit = node.jjtGetChild(0).jjtAccept(this, data);
+        if (visit != null) {
+            allSteps.get("_step" + (step - 1)).REF.add((String) visit);
+        }
+        return visit;
     }
 
     @Override
     public Object visit(ASTBoolExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        getRefs(node, data);
+        return node.jjtGetChild(0).jjtAccept(this, data);
     }
 
     @Override
     public Object visit(ASTCompExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        getRefs(node, data);
+        return node.jjtGetChild(0).jjtAccept(this, data);
     }
 
     @Override
     public Object visit(ASTNotExpr node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        return node.jjtGetChild(0).jjtAccept(this, data);
     }
 
     @Override
     public Object visit(ASTGenValue node, Object data) {
-        node.childrenAccept(this, data);
-        return null;
+        return node.jjtGetChild(0).jjtAccept(this, data);
     }
 
     @Override
@@ -200,7 +197,7 @@ public class LifeVariablesVisitor implements ParserVisitor {
     @Override
     public Object visit(ASTIdentifier node, Object data) {
         node.childrenAccept(this, data);
-        return null;
+        return "" +node.getValue();
     }
 
     @Override
@@ -262,5 +259,18 @@ public class LifeVariablesVisitor implements ParserVisitor {
 
     private void compute_IN_OUT() {
         return;
+    }
+
+    /*
+     * Fonctions utilitaires
+     * */
+
+    private void getRefs(Node node, Object data) {
+        for (int i = 1; i < node.jjtGetNumChildren(); i++) {
+            String ref = (String)node.jjtGetChild(i).jjtAccept(this, data);
+            if (ref != null) {
+                allSteps.get("_step" + (step - 1)).REF.add(ref);
+            }
+        }
     }
 }
