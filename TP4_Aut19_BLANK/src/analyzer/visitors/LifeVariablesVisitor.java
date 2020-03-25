@@ -51,7 +51,6 @@ public class LifeVariablesVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTProgram node, Object data)  {
-        //HashSet<String> previous_step = new HashSet<>();
         node.childrenAccept(this, data);
         compute_IN_OUT();
         for (int i = 0; i < step; i++) {
@@ -74,7 +73,6 @@ public class LifeVariablesVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTStmt node, Object data) {
-        //HashSet<String> previous_step = (HashSet<String>) data;
 
         String step = genStep();
         StepStatus s = new StepStatus();
@@ -124,9 +122,24 @@ public class LifeVariablesVisitor implements ParserVisitor {
 
     @Override
     public Object visit(ASTWhileStmt node, Object data) {
-        node.childrenAccept(this, data);
-        //TODO
-        return null;
+        Object visit = node.jjtGetChild(0).jjtAccept(this, data);
+        HashSet<String> mem_previous_step = (HashSet<String>) previous_step.clone();
+        HashSet<String> whilePrevStep = new HashSet<>();
+        String exprStep = "_step" + (step - 1);
+        whilePrevStep.add(exprStep);
+
+        for(int i = 1; i < node.jjtGetNumChildren(); i++ ) {
+            node.jjtGetChild(i).jjtAccept(this,data);
+            for (String e : mem_previous_step) {
+                whilePrevStep.add(e);
+            }
+        }
+        allSteps.get(exprStep).PRED.add("_step" + (step - 1));
+        for (String e : whilePrevStep) {
+            allSteps.get("_step" + (step - 1)).SUCC.add(e);
+        }
+        previous_step = (HashSet<String>) whilePrevStep.clone();
+        return visit;
     }
 
 
@@ -227,7 +240,7 @@ public class LifeVariablesVisitor implements ParserVisitor {
     } 
 
     //utile surtout pour envoyé de l'informations au enfant des expressions logiques.
-    private class StepStatus {
+    static private class StepStatus {
         public HashSet<String> REF = new HashSet<String>();
         public HashSet<String> DEF = new HashSet<String>();
         public HashSet<String> IN  = new HashSet<String>();
