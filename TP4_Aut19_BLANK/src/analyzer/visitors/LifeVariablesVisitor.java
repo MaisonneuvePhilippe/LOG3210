@@ -125,19 +125,21 @@ public class LifeVariablesVisitor implements ParserVisitor {
         Object visit = node.jjtGetChild(0).jjtAccept(this, data);
         HashSet<String> mem_previous_step = (HashSet<String>) previous_step.clone();
         HashSet<String> whilePrevStep = new HashSet<>();
-        String exprStep = "_step" + (step - 1);
-        whilePrevStep.add(exprStep);
+        String lastChild = "";
 
         for(int i = 1; i < node.jjtGetNumChildren(); i++ ) {
-            node.jjtGetChild(i).jjtAccept(this,data);
+            node.jjtGetChild(i).jjtAccept(this, data);
             for (String e : mem_previous_step) {
                 whilePrevStep.add(e);
             }
+            lastChild = "_step" + (step - 1);
         }
-        allSteps.get(exprStep).PRED.add("_step" + (step - 1));
+
         for (String e : whilePrevStep) {
-            allSteps.get("_step" + (step - 1)).SUCC.add(e);
+            allSteps.get(lastChild).SUCC.add(e);
+            allSteps.get(e).PRED.add(lastChild);
         }
+
         previous_step = (HashSet<String>) whilePrevStep.clone();
         return visit;
     }
