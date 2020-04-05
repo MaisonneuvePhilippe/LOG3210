@@ -3,11 +3,7 @@ package analyzer.visitors;
 import analyzer.ast.*;
 
 import java.io.PrintWriter;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Collections;
+import java.util.*;
 
 
 /**
@@ -273,7 +269,27 @@ public class LifeVariablesVisitor implements ParserVisitor {
     }
 
     private void compute_IN_OUT() {
-        return;
+        Stack<StepStatus> workList = new Stack<>();
+        workList.push(allSteps.get("_step" + (step - 1)));
+        while (!workList.empty() && workList.size() < step) {
+            StepStatus node = workList.pop();
+            for (String succ : node.SUCC) {
+                StepStatus succNode = allSteps.get(succ);
+                node.OUT.addAll(succNode.IN);
+            }
+            Object oldIn = node.IN.clone();
+            node.IN.addAll(node.OUT);
+            for (String def : node.DEF) {
+                node.IN.remove(def);
+            }
+            node.IN.addAll(node.REF);
+
+            if (node.IN != oldIn) {
+                for (String pred : node.PRED) {
+                    workList.push(allSteps.get(pred));
+                }
+            }
+        }
     }
 
     /*
