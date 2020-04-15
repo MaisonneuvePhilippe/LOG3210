@@ -271,7 +271,7 @@ public class LifeVariablesVisitor implements ParserVisitor {
     private void compute_IN_OUT() {
         Stack<StepStatus> workList = new Stack<>();
         workList.push(allSteps.get("_step" + (step - 1)));
-        while (!workList.empty() && workList.size() < step) {
+        while (!workList.empty()) {
             StepStatus node = workList.pop();
             for (String succ : node.SUCC) {
                 StepStatus succNode = allSteps.get(succ);
