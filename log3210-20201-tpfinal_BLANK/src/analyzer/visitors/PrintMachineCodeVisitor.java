@@ -93,6 +93,25 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         // TODO: Modify CODE to add the needed MachLine.
         //       here the type of Assignment is "assigned = left op right" and you should put pointers in the MachLine at
         //       the moment (ex: "@a")
+
+        List<String> newList = new ArrayList<>();
+
+        if (!LOADED.contains(left) && !left.contains("#")) {
+            newList.add("LD, " + left + ", " + left.replace("@", ""));
+            LOADED.add(left);
+        }
+        if (!LOADED.contains(right) && !right.contains("#")) {
+            newList.add("LD, " + right + ", " + right.replace("@", ""));
+            LOADED.add(right);
+        }
+        newList.add(op + ", " + assigned + ", " + left + ", " + right);
+        if (!LOADED.contains(assigned)) {
+            LOADED.add(assigned);
+        }
+        if (!MODIFIED.contains(assigned)) {
+            MODIFIED.add(assigned);
+        }
+        CODE.add(new MachLine(newList));
         return null;
     }
 
@@ -107,6 +126,19 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         //       here the type of Assignment is "assigned = - left" and you should put pointers in the MachLine at
         //       the moment (ex: "@a")
 
+        List<String> newList = new ArrayList<>();
+        if (!LOADED.contains(left) && !left.contains("#")) {
+            newList.add("LD, " + left + ", " + left.replace("@", ""));
+            LOADED.add(left);
+        }
+        newList.add("ADD, " + assigned + ", #0, " + left);
+        if (!LOADED.contains(assigned)) {
+            LOADED.add(assigned);
+        }
+        if (!MODIFIED.contains(assigned)) {
+            MODIFIED.add(assigned);
+        }
+        CODE.add(new MachLine(newList));
         return null;
     }
 
@@ -120,6 +152,20 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         // TODO: Modify CODE to add the needed MachLine.
         //       here the type of Assignment is "assigned = left" and you should put pointers in the MachLine at
         //       the moment (ex: "@a")
+
+        List<String> newList = new ArrayList<>();
+        if (!LOADED.contains(left) && !left.contains("#")) {
+            newList.add("LD, " + left + ", " + left.replace("@", ""));
+            LOADED.add(left);
+        }
+        newList.add("ADD, " + assigned + ", #0, " + left);
+        if (!LOADED.contains(assigned)) {
+            LOADED.add(assigned);
+        }
+        if (!MODIFIED.contains(assigned)) {
+            MODIFIED.add(assigned);
+        }
+        CODE.add(new MachLine(newList));
         return null;
     }
 
@@ -193,7 +239,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             this.line = s;
             int size = CODE.size();
 
-            // PRED, SUCC, REF, DEF already computed (cadeau
+            // PRED, SUCC, REF, DEF already computed (cadeau)
             if (size > 0) {
                 PRED.add(size-1);
                 CODE.get(size-1).SUCC.add(size);
@@ -227,10 +273,59 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
     private void compute_LifeVar() {
         // TODO: Implement LifeVariable algorithm on the CODE array (for machine code)
+        Stack<MachLine> workList = new Stack<>();
+        workList.push(CODE.get(CODE.size() - 1));
+        while (!workList.empty()) {
+            MachLine node = workList.pop();
+            for (Integer succ : node.SUCC) {
+                MachLine succNode = CODE.get(succ);
+                node.Life_OUT.addAll(succNode.Life_IN);
+            }
+            HashSet<String> oldIn = (HashSet<String>) node.Life_IN.clone();
+            node.Life_IN.addAll(node.Life_OUT);
+            for (String def : node.DEF) {
+                node.Life_IN.remove(def);
+            }
+            node.Life_IN.addAll(node.REF);
+
+            if (!node.Life_IN.equals(oldIn)) {
+                for (Integer pred : node.PRED) {
+                    workList.push(CODE.get(pred));
+                }
+            }
+        }
     }
 
     private void compute_NextUse() {
         // TODO: Implement NextUse algorithm on the CODE array (for machine code)
+        Stack<MachLine> workList = new Stack<>();
+        workList.push(CODE.get(CODE.size() - 1));
+        while (!workList.empty()) {
+            MachLine node = workList.pop();
+            Integer current_line_number = CODE.indexOf(node);
+            for (Integer succ : node.SUCC) {
+                MachLine succNode = CODE.get(succ);
+                node.Next_OUT.nextuse.putAll(succNode.Next_IN.nextuse);
+            }
+            NextUse oldIn = (NextUse) node.Next_IN.clone();
+            for (Map.Entry<String, ArrayList<Integer>> out : node.Next_OUT.nextuse.entrySet()) {
+                if (!node.DEF.contains(out.getKey())) {
+                    node.Next_IN.nextuse.put(out.getKey(), out.getValue());
+                }
+            }
+
+            for (String ref : node.REF) {
+                ArrayList<Integer> lineList = new ArrayList<Integer>();
+                lineList.add(current_line_number);
+                node.Next_IN.nextuse.put(ref, lineList);
+            }
+
+            if (!node.Next_IN.equals(oldIn)) {
+                for (Integer pred : node.PRED) {
+                    workList.push(CODE.get(pred));
+                }
+            }
+        }
     }
 
     public void compute_machineCode() {
