@@ -1,9 +1,12 @@
 package analyzer.visitors;
 
 import analyzer.ast.*;
+import analyzer.graphe.Graph;
+import analyzer.graphe.GraphNode;
 import com.sun.javafx.geom.Edge;
 import com.sun.org.apache.bcel.internal.generic.RET;
 import com.sun.org.apache.xpath.internal.operations.Bool;
+import javafx.util.Pair;
 
 import javax.crypto.Mac;
 import java.io.PrintWriter;
@@ -18,6 +21,9 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
     private ArrayList<MachLine> CODE   = new ArrayList<MachLine>(); // representation of the Machine Code in Machine lines (MachLine)
     private ArrayList<String> LOADED   = new ArrayList<String>(); // could be use to keep which variable/pointer are loaded/ defined while going through the intermediate code
     private ArrayList<String> MODIFIED = new ArrayList<String>(); // could be use to keep which variable/pointer are modified while going through the intermediate code
+
+    // Nos ajouts
+    private HashMap<String, ArrayList<String>> grapheInterference = new HashMap<>();
 
     private HashMap<String,String> OP; // map to get the operation name from it's value
     public PrintMachineCodeVisitor(PrintWriter writer) {
@@ -349,11 +355,11 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 node.Next_IN.nextuse.put(ref, lineList);
             }
 
-            if (!node.Next_IN.equals(oldIn)) {
-                for (Integer pred : node.PRED) {
-                    workList.push(CODE.get(pred));
-                }
+            // ignore OLD_IN != IN
+            for (Integer pred : node.PRED) {
+                workList.push(CODE.get(pred));
             }
+
         }
     }
 
@@ -363,6 +369,65 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         //       described in the TP requirements.
     }
 
+    public void compute_graph() {
+        for (MachLine line : CODE) {
+            for (String node : line.Next_OUT.nextuse.keySet()) {
+                Set<String> neighbours = new HashSet<>();
+                neighbours.addAll(line.Next_OUT.nextuse.keySet());
+                ArrayList<String> prevNeighbours = grapheInterference.get(node);
+                neighbours.addAll(prevNeighbours);
+                neighbours.remove(node);
+                prevNeighbours.clear();
+                prevNeighbours.addAll(neighbours);
+                grapheInterference.put(node, prevNeighbours);
+            }
+        }
+    }
+
+    public void colourGraph() {
+        Stack<Pair<String, ArrayList<String>>> stack = new Stack<>();
+        HashMap<String, String> colourMap = new HashMap<>();
+
+        while (!grapheInterference.isEmpty()) {
+            // Init du noeud ayant le plus de voisins inférieur au REG
+            Pair<String, ArrayList<String>> mostNeighboursNode = new Pair<>("", new ArrayList<>());
+
+            // Recherche du noeud
+            for (Map.Entry<String, ArrayList<String>> node : grapheInterference.entrySet()) {
+                int nbNeighbours = node.getValue().size();
+                if (nbNeighbours > mostNeighboursNode.getValue().size() && nbNeighbours < REG) {
+                    mostNeighboursNode = new Pair<>(node.getKey(), node.getValue());
+                    break;
+                }
+            }
+
+            if (mostNeighboursNode.getKey().equals("")) {
+                do_spill();
+                return;
+            } else {
+                // Supprimer noeud si trouvé
+                grapheInterference.remove(mostNeighboursNode.getKey());
+            }
+            stack.push(mostNeighboursNode);
+        }
+
+        while (!stack.empty()) {
+            Pair<String, ArrayList<String>> node = stack.pop();
+
+            grapheInterference.put(node.getKey(), node.getValue());
+            int colourCount = 0;
+            String colour = "R".concat(String.valueOf(colourCount));
+            for (String neighbour : node.getValue()) {
+                if (colourMap.get(neighbour).equals(colour)) {
+                    colourCount++;
+                    colour = "R".concat(String.valueOf(colourCount));
+                }
+            }
+            colourMap.put(node.getKey(), colour);
+        }
+    }
+
+    public void do_spill() {}
 
     public List<String> set_ordered(Set<String> s) {
         // function given to order a set in alphabetic order TODO: use it! or redo-it yourself
