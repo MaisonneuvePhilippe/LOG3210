@@ -45,6 +45,8 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         compute_LifeVar(); // first Life variables computation (should be recalled when machine code generation)
         compute_NextUse(); // first Next-Use computation (should be recalled when machine code generation)
         compute_machineCode(); // generate the machine code from the CODE array (the CODE array should be transformed
+        compute_LifeVar();
+        compute_NextUse();
 
         for (int i = 0; i < CODE.size(); i++) // print the output
             m_writer.println(CODE.get(i));
@@ -97,21 +99,26 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         List<String> newList = new ArrayList<>();
 
         if (!LOADED.contains(left) && !left.contains("#")) {
-            newList.add("LD, " + left + ", " + left.replace("@", ""));
+            newList.add("LD " + left + ", " + left.replace("@", ""));
             LOADED.add(left);
         }
         if (!LOADED.contains(right) && !right.contains("#")) {
-            newList.add("LD, " + right + ", " + right.replace("@", ""));
+            newList.add("LD " + right + ", " + right.replace("@", ""));
             LOADED.add(right);
         }
-        newList.add(op + ", " + assigned + ", " + left + ", " + right);
+        newList.add(OP.get(op) + " " + assigned + ", " + left + ", " + right);
         if (!LOADED.contains(assigned)) {
             LOADED.add(assigned);
         }
         if (!MODIFIED.contains(assigned)) {
             MODIFIED.add(assigned);
         }
-        CODE.add(new MachLine(newList));
+
+        MachLine machLine = new MachLine(newList);
+        machLine.DEF.add(assigned);
+        machLine.REF.add(right);
+        machLine.REF.add(left);
+        CODE.add(machLine);
         return null;
     }
 
@@ -128,17 +135,21 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
         List<String> newList = new ArrayList<>();
         if (!LOADED.contains(left) && !left.contains("#")) {
-            newList.add("LD, " + left + ", " + left.replace("@", ""));
+            newList.add("LD " + left + ", " + left.replace("@", ""));
             LOADED.add(left);
         }
-        newList.add("ADD, " + assigned + ", #0, " + left);
+        newList.add("ADD " + assigned + ", #0, " + left);
         if (!LOADED.contains(assigned)) {
             LOADED.add(assigned);
         }
         if (!MODIFIED.contains(assigned)) {
             MODIFIED.add(assigned);
         }
-        CODE.add(new MachLine(newList));
+
+        MachLine machLine = new MachLine(newList);
+        machLine.DEF.add(assigned);
+        machLine.REF.add(left);
+        CODE.add(machLine);
         return null;
     }
 
@@ -155,17 +166,21 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
         List<String> newList = new ArrayList<>();
         if (!LOADED.contains(left) && !left.contains("#")) {
-            newList.add("LD, " + left + ", " + left.replace("@", ""));
+            newList.add("LD " + left + ", " + left.replace("@", ""));
             LOADED.add(left);
         }
-        newList.add("ADD, " + assigned + ", #0, " + left);
+        newList.add("ADD " + assigned + ", #0, " + left);
         if (!LOADED.contains(assigned)) {
             LOADED.add(assigned);
         }
         if (!MODIFIED.contains(assigned)) {
             MODIFIED.add(assigned);
         }
-        CODE.add(new MachLine(newList));
+
+        MachLine machLine = new MachLine(newList);
+        machLine.DEF.add(assigned);
+        machLine.REF.add(left);
+        CODE.add(machLine);
         return null;
     }
 
@@ -239,24 +254,23 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             this.line = s;
             int size = CODE.size();
 
-            // PRED, SUCC, REF, DEF already computed (cadeau)
+            // PRED, SUCC already computed (cadeau)
             if (size > 0) {
                 PRED.add(size-1);
                 CODE.get(size-1).SUCC.add(size);
             }
-            this.DEF.add(s.get(1));
-            for (int i = 2; i < s.size(); i++)
-                if (s.get(i).charAt(0) == '@')
-                    this.REF.add(s.get(i));
         }
 
         public String toString() {
             String buff = "";
 
             // print line :
-            buff += line.get(0) + " " + line.get(1);
+            buff += line.get(0) + " ";
+            if (line.size() > 1) {
+                buff += line.get(1);
+            }
             for (int i = 2; i < line.size(); i++)
-                buff += ", " + line.get(i);
+                buff += " " + line.get(i);
             buff +="\n";
             // you can uncomment the others set if you want to see them.
             // buff += "// REF      : " +  REF.toString() +"\n";
