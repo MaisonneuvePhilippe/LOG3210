@@ -97,15 +97,22 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         //       the moment (ex: "@a")
 
         List<String> newList = new ArrayList<>();
-
         if (!LOADED.contains(left) && !left.contains("#")) {
             newList.add("LD " + left + ", " + left.replace("@", ""));
+            MachLine machLine = new MachLine(newList);
+            machLine.DEF.add(left);
+            CODE.add(machLine);
             LOADED.add(left);
         }
+        newList = new ArrayList<>();
         if (!LOADED.contains(right) && !right.contains("#")) {
             newList.add("LD " + right + ", " + right.replace("@", ""));
+            MachLine machLine = new MachLine(newList);
+            machLine.DEF.add(right);
+            CODE.add(machLine);
             LOADED.add(right);
         }
+        newList = new ArrayList<>();
         newList.add(OP.get(op) + " " + assigned + ", " + left + ", " + right);
         if (!LOADED.contains(assigned)) {
             LOADED.add(assigned);
@@ -136,8 +143,12 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         List<String> newList = new ArrayList<>();
         if (!LOADED.contains(left) && !left.contains("#")) {
             newList.add("LD " + left + ", " + left.replace("@", ""));
+            MachLine machLine = new MachLine(newList);
+            machLine.DEF.add(left);
+            CODE.add(machLine);
             LOADED.add(left);
         }
+        newList = new ArrayList<>();
         newList.add("ADD " + assigned + ", #0, " + left);
         if (!LOADED.contains(assigned)) {
             LOADED.add(assigned);
@@ -167,8 +178,12 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         List<String> newList = new ArrayList<>();
         if (!LOADED.contains(left) && !left.contains("#")) {
             newList.add("LD " + left + ", " + left.replace("@", ""));
+            MachLine machLine = new MachLine(newList);
+            machLine.DEF.add(left);
+            CODE.add(machLine);
             LOADED.add(left);
         }
+        newList = new ArrayList<>();
         newList.add("ADD " + assigned + ", #0, " + left);
         if (!LOADED.contains(assigned)) {
             LOADED.add(assigned);
@@ -265,9 +280,9 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             String buff = "";
 
             // print line :
-            buff += line.get(0) + " ";
+            buff += line.get(0);
             if (line.size() > 1) {
-                buff += line.get(1);
+                buff += " " + line.get(1);
             }
             for (int i = 2; i < line.size(); i++)
                 buff += " " + line.get(i);
