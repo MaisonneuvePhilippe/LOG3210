@@ -1,8 +1,6 @@
 package analyzer.visitors;
 
 import analyzer.ast.*;
-import analyzer.graphe.Graph;
-import analyzer.graphe.GraphNode;
 import com.sun.javafx.geom.Edge;
 import com.sun.org.apache.bcel.internal.generic.RET;
 import com.sun.org.apache.xpath.internal.operations.Bool;
