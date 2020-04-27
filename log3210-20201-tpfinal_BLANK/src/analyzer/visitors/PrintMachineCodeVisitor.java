@@ -23,8 +23,9 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
     // Nos ajouts
     private HashMap<String, ArrayList<String>> grapheInterference = new HashMap<>();
-
+    private HashMap<String, String> colourMap = new HashMap<>();
     private HashMap<String,String> OP; // map to get the operation name from it's value
+
     public PrintMachineCodeVisitor(PrintWriter writer) {
         m_writer = writer;
 
@@ -49,6 +50,8 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
         compute_LifeVar(); // first Life variables computation (should be recalled when machine code generation)
         compute_NextUse(); // first Next-Use computation (should be recalled when machine code generation)
+
+        colourGraph();
         compute_machineCode(); // generate the machine code from the CODE array (the CODE array should be transformed
         compute_LifeVar();
         compute_NextUse();
@@ -71,12 +74,14 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             RETURNED.add("@" + ((ASTIdentifier) node.jjtGetChild(i)).getValue()); // returned values (here are saved in "@*somthing*" format, you can change that if you want.
 
             // TODO: the returned variables should be added to the Life_OUT set of the last statement of the basic block (before the "ST" expressions in the machine code)
+
+
+            CODE.get(CODE.size()-1).Life_OUT.addAll(RETURNED);
         }
 
         return null;
     }
 
-    @Override
     public Object visit(ASTBlock node, Object data) {
         node.childrenAccept(this, null);
         return null;
@@ -366,35 +371,55 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         // TODO: Implement machine code with graph coloring for register assignation (REG is the register limitation)
         //       The pointers (ex: "@a") here should be replace by registers (ex: R0) respecting the coloring algorithm
         //       described in the TP requirements.
+        // chambre 4 extension e
+        for (MachLine lines: CODE){
+            for (String line : lines.line){
+                String rep = line;
+
+                for (java.util.Map.Entry<String,String> entry: colourMap.entrySet()) {
+                    rep = rep.replace(entry.getKey()+",",colourMap.get(entry.getKey())+",");
+                    rep = rep.replaceAll(entry.getKey()+"$",colourMap.get(entry.getKey()));
+                    //rep += entry.getKey();
+                }
+                lines.line.set(0, rep);
+
+            }
+
+        }
     }
 
     public void compute_graph() {
         for (MachLine line : CODE) {
             for (String node : line.Next_OUT.nextuse.keySet()) {
-                Set<String> neighbours = new HashSet<>();
+                HashSet<String> neighbours = new HashSet<>();
                 neighbours.addAll(line.Next_OUT.nextuse.keySet());
-                ArrayList<String> prevNeighbours = grapheInterference.get(node);
-                neighbours.addAll(prevNeighbours);
-                neighbours.remove(node);
-                prevNeighbours.clear();
-                prevNeighbours.addAll(neighbours);
-                grapheInterference.put(node, prevNeighbours);
+                if (grapheInterference.containsKey(node)) {
+                    ArrayList<String> prevNeighbours = grapheInterference.get(node);
+                    neighbours.addAll(prevNeighbours);
+                    neighbours.remove(node);
+                }
+                grapheInterference.remove(node);
+                grapheInterference.put(node, new ArrayList<>(neighbours));
             }
         }
     }
 
     public void colourGraph() {
         Stack<Pair<String, ArrayList<String>>> stack = new Stack<>();
-        HashMap<String, String> colourMap = new HashMap<>();
-        Integer reg = REG;
+        compute_graph();
+        int reg = REG;
+        int c = 0;
         while (!grapheInterference.isEmpty()) {
+            c++;
             // Init du noeud ayant le plus de voisins inférieur au REG
             Pair<String, ArrayList<String>> mostNeighboursNode = new Pair<>("", new ArrayList<>());
 
             // Recherche du noeud
-
+            //colourMap.put("1","2");
             for (Map.Entry<String, ArrayList<String>> node : grapheInterference.entrySet()) {
+
                 int nbNeighbours = node.getValue().size();
+
                 if (nbNeighbours > mostNeighboursNode.getValue().size() && nbNeighbours < reg) {
                     mostNeighboursNode = new Pair<>(node.getKey(), node.getValue());
                     break;
@@ -403,27 +428,29 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
             if (mostNeighboursNode.getKey().equals("")) {
                 //do_spill(grapheInterference.entrySet());
-                return;
+                c++;
+                break;
             } else {
                 // Supprimer noeud si trouvé
                 grapheInterference.remove(mostNeighboursNode.getKey());
             }
             stack.push(mostNeighboursNode);
         }
-
+        int colourCount = 0;
         while (!stack.empty()) {
             Pair<String, ArrayList<String>> node = stack.pop();
 
             grapheInterference.put(node.getKey(), node.getValue());
-            int colourCount = 0;
+
             String colour = "R".concat(String.valueOf(colourCount));
             for (String neighbour : node.getValue()) {
-                if (colourMap.get(neighbour).equals(colour)) {
+                if(!colourMap.containsKey(node.getKey())) {
                     colourCount++;
                     colour = "R".concat(String.valueOf(colourCount));
                 }
+                colourMap.put(node.getKey(), colour);
             }
-            colourMap.put(node.getKey(), colour);
+
         }
     }
 
@@ -431,10 +458,10 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         int first = 1;
 
         for(MachLine machLine :CODE){
-            if (machLine.Life_IN.contains(node) && machLine.line.get(0).equals("OP")){
+            if (machLine.Life_IN.contains(node) && machLine.line.get(0).contains("OP")) {
+                first = CODE.indexOf(machLine);
                 break;
             }
-            first++;
         }
         if (MODIFIED.contains(node)){
             List<String> newList = new ArrayList<>();
