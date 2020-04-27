@@ -3,6 +3,7 @@ package analyzer.visitors;
 import analyzer.ast.*;
 import com.sun.javafx.geom.Edge;
 import com.sun.org.apache.bcel.internal.generic.RET;
+import com.sun.org.apache.xpath.internal.NodeSet;
 import com.sun.org.apache.xpath.internal.operations.Bool;
 import javafx.util.Pair;
 
@@ -385,22 +386,23 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
     public void colourGraph() {
         Stack<Pair<String, ArrayList<String>>> stack = new Stack<>();
         HashMap<String, String> colourMap = new HashMap<>();
-
+        Integer reg = REG;
         while (!grapheInterference.isEmpty()) {
             // Init du noeud ayant le plus de voisins inférieur au REG
             Pair<String, ArrayList<String>> mostNeighboursNode = new Pair<>("", new ArrayList<>());
 
             // Recherche du noeud
+
             for (Map.Entry<String, ArrayList<String>> node : grapheInterference.entrySet()) {
                 int nbNeighbours = node.getValue().size();
-                if (nbNeighbours > mostNeighboursNode.getValue().size() && nbNeighbours < REG) {
+                if (nbNeighbours > mostNeighboursNode.getValue().size() && nbNeighbours < reg) {
                     mostNeighboursNode = new Pair<>(node.getKey(), node.getValue());
                     break;
                 }
             }
 
             if (mostNeighboursNode.getKey().equals("")) {
-                do_spill();
+                //do_spill(grapheInterference.entrySet());
                 return;
             } else {
                 // Supprimer noeud si trouvé
@@ -425,7 +427,42 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         }
     }
 
-    public void do_spill() {}
+    public void do_spill(MachLine node) {
+        int first = 1;
+
+        for(MachLine machLine :CODE){
+            if (machLine.Life_IN.contains(node) && machLine.line.get(0).equals("OP")){
+                break;
+            }
+            first++;
+        }
+        if (MODIFIED.contains(node)){
+            List<String> newList = new ArrayList<>();
+            newList.add("ST" + node);
+            MachLine machLine = new MachLine(newList);
+            CODE.add(first+1,machLine);
+        }
+
+        if (!CODE.get(first).Next_OUT.nextuse.get(node).isEmpty()){
+            List<String> newList = new ArrayList<>();
+            newList.add("LD" + node+"!");
+            CODE.add(node.Next_OUT.nextuse.get(0).get(0), new MachLine(newList));
+
+            for (int i = node.Next_OUT.nextuse.get(0).get(0); i< CODE.size(); i++){
+                if (false){
+                    CODE.remove(i);
+                }
+                else if (CODE.contains(node)){
+                    List<String> otherList = new ArrayList<>();
+                    otherList.add( node+"!");
+                    CODE.set(CODE.indexOf(node), new MachLine(otherList));
+                }
+
+            }
+
+
+        }
+    }
 
     public List<String> set_ordered(Set<String> s) {
         // function given to order a set in alphabetic order TODO: use it! or redo-it yourself
