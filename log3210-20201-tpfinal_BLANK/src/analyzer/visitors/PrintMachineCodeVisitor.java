@@ -379,7 +379,6 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 for (java.util.Map.Entry<String,String> entry: colourMap.entrySet()) {
                     rep = rep.replace(entry.getKey()+",",colourMap.get(entry.getKey())+",");
                     rep = rep.replaceAll(entry.getKey()+"$",colourMap.get(entry.getKey()));
-                    //rep += entry.getKey();
                 }
                 lines.line.set(0, rep);
 
@@ -405,93 +404,116 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
     }
 
     public void colourGraph() {
-        Stack<Pair<String, ArrayList<String>>> stack = new Stack<>();
+        Stack<Map.Entry<String, ArrayList<String>>> stack = new Stack<>();
         compute_graph();
         int reg = REG;
-        int c = 0;
-        while (!grapheInterference.isEmpty()) {
-            c++;
-            // Init du noeud ayant le plus de voisins inférieur au REG
-            Pair<String, ArrayList<String>> mostNeighboursNode = new Pair<>("", new ArrayList<>());
 
+        while (!grapheInterference.isEmpty()) {
+            // Init du noeud ayant le plus de voisins inférieur au REG
+
+            Map.Entry<String, ArrayList<String>> mostNeighboursNode;
+            if (grapheInterference.entrySet().iterator().next().getValue().size() < reg) {
+                mostNeighboursNode = grapheInterference.entrySet().iterator().next();
+            } else {
+                ArrayList<String> list = new ArrayList<>();
+                mostNeighboursNode = new AbstractMap.SimpleEntry<String, ArrayList<String>>("", list);
+            }
             // Recherche du noeud
-            //colourMap.put("1","2");
             for (Map.Entry<String, ArrayList<String>> node : grapheInterference.entrySet()) {
 
                 int nbNeighbours = node.getValue().size();
 
                 if (nbNeighbours > mostNeighboursNode.getValue().size() && nbNeighbours < reg) {
-                    mostNeighboursNode = new Pair<>(node.getKey(), node.getValue());
+                    mostNeighboursNode = node;
                     break;
                 }
             }
-
             if (mostNeighboursNode.getKey().equals("")) {
-                //do_spill(grapheInterference.entrySet());
-                c++;
+
+                do_spill();
                 break;
             } else {
-                // Supprimer noeud si trouvé
                 grapheInterference.remove(mostNeighboursNode.getKey());
+                for (Map.Entry<String, ArrayList<String>> Entry : grapheInterference.entrySet()) {
+                    for (String value : Entry.getValue()) {
+                        if (value.equals(mostNeighboursNode.getKey())) {
+                            Entry.getValue().remove(value);
+                            break;
+                        }
+                    }
+                }
+                stack.push(mostNeighboursNode);
+
             }
-            stack.push(mostNeighboursNode);
         }
-        int colourCount = 0;
-        while (!stack.empty()) {
-            Pair<String, ArrayList<String>> node = stack.pop();
+        while (!stack.isEmpty()) {
+            Map.Entry<String, ArrayList<String>> node = stack.pop();
 
             grapheInterference.put(node.getKey(), node.getValue());
-
+            int colourCount = 0;
             String colour = "R".concat(String.valueOf(colourCount));
             for (String neighbour : node.getValue()) {
-                if(!colourMap.containsKey(node.getKey())) {
+                if(colourMap.containsKey(neighbour) && colourMap.get(neighbour).equals(colour)) {
                     colourCount++;
                     colour = "R".concat(String.valueOf(colourCount));
                 }
-                colourMap.put(node.getKey(), colour);
             }
+            colourMap.put(node.getKey(), colour);
 
         }
+
     }
 
-    public void do_spill(MachLine node) {
+    public void do_spill() {
         int first = 1;
 
+        Map.Entry<String, ArrayList<String>> mostNeighboursNode;
+        mostNeighboursNode = grapheInterference.entrySet().iterator().next();
+        for (Map.Entry<String, ArrayList<String>> node : grapheInterference.entrySet()) {
+            int nbNeighbours = node.getValue().size();
+            if (nbNeighbours > mostNeighboursNode.getValue().size()) {
+
+                mostNeighboursNode = node;
+                break;
+            }
+        }
+
+
         for(MachLine machLine :CODE){
-            if (machLine.Life_IN.contains(node) && machLine.line.get(0).contains("OP")) {
+            if (machLine.Life_IN.contains(mostNeighboursNode.getKey()) && !machLine.line.get(0).contains("LD") && !machLine.line.get(0).contains("LD")) {
                 first = CODE.indexOf(machLine);
                 break;
             }
         }
-        if (MODIFIED.contains(node)){
+
+        if (MODIFIED.contains(mostNeighboursNode)){
             List<String> newList = new ArrayList<>();
-            newList.add("ST" + node);
+            newList.add("ST" + mostNeighboursNode);
             MachLine machLine = new MachLine(newList);
             CODE.add(first+1,machLine);
         }
 
-        if (!CODE.get(first).Next_OUT.nextuse.get(node).isEmpty()){
-            List<String> newList = new ArrayList<>();
-            newList.add("LD" + node+"!");
-            CODE.add(node.Next_OUT.nextuse.get(0).get(0), new MachLine(newList));
+        if (!CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).isEmpty()){
 
-            for (int i = node.Next_OUT.nextuse.get(0).get(0); i< CODE.size(); i++){
-                if (false){
+            List<String> newList = new ArrayList<>();
+            newList.add("LD" + mostNeighboursNode +"!");
+            MachLine machLine = new MachLine(newList);
+            CODE.add(CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).get(0),machLine);
+
+            for (int i = CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).get(0);i<CODE.size();i++){
+                if (CODE.get(i).line.get(0).contains("ST")){
                     CODE.remove(i);
                 }
-                else if (CODE.contains(node)){
-                    List<String> otherList = new ArrayList<>();
-                    otherList.add( node+"!");
-                    CODE.set(CODE.indexOf(node), new MachLine(otherList));
+                else if (CODE.get(i).line.get(0).contains(mostNeighboursNode.toString())){
+                    CODE.get(i).line.get(0).replace(mostNeighboursNode.toString(),mostNeighboursNode+"!");
                 }
-
             }
-
-
         }
+
+
     }
 
-    public List<String> set_ordered(Set<String> s) {
+    public List<String> set_ordered (Set<String> s){
         // function given to order a set in alphabetic order TODO: use it! or redo-it yourself
         List<String> list = new ArrayList<String>(s);
         Collections.sort(list);
