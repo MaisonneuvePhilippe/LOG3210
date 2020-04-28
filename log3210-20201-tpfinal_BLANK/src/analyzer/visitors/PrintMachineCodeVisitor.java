@@ -106,36 +106,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         //       here the type of Assignment is "assigned = left op right" and you should put pointers in the MachLine at
         //       the moment (ex: "@a")
 
-        List<String> newList = new ArrayList<>();
-        if (!LOADED.contains(left) && !left.contains("#")) {
-            newList.add("LD " + left + ", " + left.replace("@", ""));
-            MachLine machLine = new MachLine(newList);
-            machLine.DEF.add(left);
-            CODE.add(machLine);
-            LOADED.add(left);
-        }
-        newList = new ArrayList<>();
-        if (!LOADED.contains(right) && !right.contains("#")) {
-            newList.add("LD " + right + ", " + right.replace("@", ""));
-            MachLine machLine = new MachLine(newList);
-            machLine.DEF.add(right);
-            CODE.add(machLine);
-            LOADED.add(right);
-        }
-        newList = new ArrayList<>();
-        newList.add(OP.get(op) + " " + assigned + ", " + left + ", " + right);
-        if (!LOADED.contains(assigned)) {
-            LOADED.add(assigned);
-        }
-        if (!MODIFIED.contains(assigned)) {
-            MODIFIED.add(assigned);
-        }
-
-        MachLine machLine = new MachLine(newList);
-        machLine.DEF.add(assigned);
-        machLine.REF.add(right);
-        machLine.REF.add(left);
-        CODE.add(machLine);
+        addMachineLine(assigned, left, right, op);
         return null;
     }
 
@@ -150,27 +121,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         //       here the type of Assignment is "assigned = - left" and you should put pointers in the MachLine at
         //       the moment (ex: "@a")
 
-        List<String> newList = new ArrayList<>();
-        if (!LOADED.contains(left) && !left.contains("#")) {
-            newList.add("LD " + left + ", " + left.replace("@", ""));
-            MachLine machLine = new MachLine(newList);
-            machLine.DEF.add(left);
-            CODE.add(machLine);
-            LOADED.add(left);
-        }
-        newList = new ArrayList<>();
-        newList.add("ADD " + assigned + ", #0, " + left);
-        if (!LOADED.contains(assigned)) {
-            LOADED.add(assigned);
-        }
-        if (!MODIFIED.contains(assigned)) {
-            MODIFIED.add(assigned);
-        }
-
-        MachLine machLine = new MachLine(newList);
-        machLine.DEF.add(assigned);
-        machLine.REF.add(left);
-        CODE.add(machLine);
+        addMachineLine(assigned, left, null, null);
         return null;
     }
 
@@ -185,27 +136,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         //       here the type of Assignment is "assigned = left" and you should put pointers in the MachLine at
         //       the moment (ex: "@a")
 
-        List<String> newList = new ArrayList<>();
-        if (!LOADED.contains(left) && !left.contains("#")) {
-            newList.add("LD " + left + ", " + left.replace("@", ""));
-            MachLine machLine = new MachLine(newList);
-            machLine.DEF.add(left);
-            CODE.add(machLine);
-            LOADED.add(left);
-        }
-        newList = new ArrayList<>();
-        newList.add("ADD " + assigned + ", #0, " + left);
-        if (!LOADED.contains(assigned)) {
-            LOADED.add(assigned);
-        }
-        if (!MODIFIED.contains(assigned)) {
-            MODIFIED.add(assigned);
-        }
-
-        MachLine machLine = new MachLine(newList);
-        machLine.DEF.add(assigned);
-        machLine.REF.add(left);
-        CODE.add(machLine);
+        addMachineLine(assigned, left, null, null);
         return null;
     }
 
@@ -225,6 +156,50 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
     public Object visit(ASTIdentifier node, Object data) {
         //nothing to do here
         return "@" + node.getValue();
+    }
+
+    public void addMachineLine(String assigned, String left, String right, String op) {
+        List<String> newList = new ArrayList<>();
+        if (!LOADED.contains(left) && !left.contains("#")) {
+            newList.add("LD " + left + ", " + left.replace("@", ""));
+            MachLine machLine = new MachLine(newList);
+            machLine.DEF.add(left);
+            CODE.add(machLine);
+            LOADED.add(left);
+        }
+
+        if (right != null) {
+            newList = new ArrayList<>();
+            if (!LOADED.contains(right) && !right.contains("#")) {
+                newList.add("LD " + right + ", " + right.replace("@", ""));
+                MachLine machLine = new MachLine(newList);
+                machLine.DEF.add(right);
+                CODE.add(machLine);
+                LOADED.add(right);
+            }
+        }
+        newList = new ArrayList<>();
+        if (op != null) {
+            newList.add(OP.get(op) + " " + assigned + ", " + left + ", " + right);
+        } else {
+            newList.add("ADD " + assigned + ", #0, " + left);
+        }
+        if (!LOADED.contains(assigned)) {
+            LOADED.add(assigned);
+        }
+        if (!MODIFIED.contains(assigned)) {
+            MODIFIED.add(assigned);
+        }
+
+        MachLine machLine = new MachLine(newList);
+        machLine.DEF.add(assigned);
+        if (right != null && !right.contains("#")) {
+            machLine.REF.add(right);
+        }
+        if (!left.contains("#")) {
+            machLine.REF.add(left);
+        }
+        CODE.add(machLine);
     }
 
 
@@ -349,13 +324,23 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             NextUse oldIn = (NextUse) node.Next_IN.clone();
             for (Map.Entry<String, ArrayList<Integer>> out : node.Next_OUT.nextuse.entrySet()) {
                 if (!node.DEF.contains(out.getKey())) {
-                    node.Next_IN.nextuse.put(out.getKey(), out.getValue());
+                    ArrayList<Integer> newNextIn = (ArrayList<Integer>) out.getValue().clone();
+                    newNextIn.removeIf(n -> n < current_line_number);
+                    node.Next_IN.nextuse.put(out.getKey(), newNextIn);
                 }
             }
 
+            ArrayList<Integer> lineList;
             for (String ref : node.REF) {
-                ArrayList<Integer> lineList = new ArrayList<Integer>();
-                lineList.add(current_line_number);
+                if (node.Next_IN.nextuse.containsKey(ref)) {
+                     lineList = node.Next_IN.nextuse.get(ref);
+                } else {
+                    lineList = new ArrayList<>();
+                }
+                if (!lineList.contains(current_line_number)) {
+                    lineList.add(current_line_number);
+                }
+                Collections.sort(lineList);
                 node.Next_IN.nextuse.put(ref, lineList);
             }
 
@@ -429,7 +414,6 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 }
             }
             if (mostNeighboursNode.getKey().equals("")) {
-
                 do_spill();
                 break;
             } else {
@@ -500,12 +484,13 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             MachLine machLine = new MachLine(newList);
             CODE.add(CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).get(0),machLine);
 
-            for (int i = CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).get(0);i<CODE.size();i++){
-                if (CODE.get(i).line.get(0).contains("ST")){
-                    CODE.remove(i);
-                }
-                else if (CODE.get(i).line.get(0).contains(mostNeighboursNode.toString())){
-                    CODE.get(i).line.get(0).replace(mostNeighboursNode.toString(),mostNeighboursNode+"!");
+            if (CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()) != null) {
+                for (int i = CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).get(0); i < CODE.size(); i++) {
+                    if (CODE.get(i).line.get(0).contains("ST")) {
+                        CODE.remove(i);
+                    } else if (CODE.get(i).line.get(0).contains(mostNeighboursNode.toString())) {
+                        CODE.get(i).line.get(0).replace(mostNeighboursNode.toString(), mostNeighboursNode + "!");
+                    }
                 }
             }
         }
