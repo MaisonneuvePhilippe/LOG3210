@@ -364,6 +364,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 for (java.util.Map.Entry<String,String> entry: colourMap.entrySet()) {
                     rep = rep.replace(entry.getKey()+",",colourMap.get(entry.getKey())+",");
                     rep = rep.replaceAll(entry.getKey()+"$",colourMap.get(entry.getKey()));
+                    //rep = rep.replace("#0", colourMap.toString());
                 }
                 lines.line.set(0, rep);
 
@@ -384,6 +385,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 }
                 grapheInterference.remove(node);
                 grapheInterference.put(node, new ArrayList<>(neighbours));
+
             }
         }
     }
@@ -435,11 +437,17 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
             grapheInterference.put(node.getKey(), node.getValue());
             int colourCount = 0;
+            boolean finish = false;
             String colour = "R".concat(String.valueOf(colourCount));
-            for (String neighbour : node.getValue()) {
-                if(colourMap.containsKey(neighbour) && colourMap.get(neighbour).equals(colour)) {
-                    colourCount++;
-                    colour = "R".concat(String.valueOf(colourCount));
+            while (finish == false) {
+                finish= true;
+                for (String neighbour : node.getValue()) {
+
+                    if (colourMap.containsKey(neighbour) && colourMap.get(neighbour).equals(colour)) {
+                        colourCount++;
+                        colour = "R".concat(String.valueOf(colourCount));
+                        finish = false;
+                    }
                 }
             }
             colourMap.put(node.getKey(), colour);
@@ -453,34 +461,28 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
         Map.Entry<String, ArrayList<String>> mostNeighboursNode;
         mostNeighboursNode = grapheInterference.entrySet().iterator().next();
-        for (Map.Entry<String, ArrayList<String>> node : grapheInterference.entrySet()) {
-            int nbNeighbours = node.getValue().size();
-            if (nbNeighbours > mostNeighboursNode.getValue().size()) {
-
-                mostNeighboursNode = node;
-                break;
-            }
-        }
 
 
         for(MachLine machLine :CODE){
             if (machLine.Life_IN.contains(mostNeighboursNode.getKey()) && !machLine.line.get(0).contains("LD") && !machLine.line.get(0).contains("LD")) {
-                first = CODE.indexOf(machLine);
                 break;
             }
+            first++;
         }
 
-        if (MODIFIED.contains(mostNeighboursNode)){
+
+        if (MODIFIED.contains(mostNeighboursNode.getKey())){
             List<String> newList = new ArrayList<>();
-            newList.add("ST" + mostNeighboursNode);
+            newList.add("ST " + mostNeighboursNode.getKey().replace("@","") +", "+ mostNeighboursNode.getKey());
             MachLine machLine = new MachLine(newList);
             CODE.add(first+1,machLine);
+
         }
 
         if (!CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).isEmpty()){
 
             List<String> newList = new ArrayList<>();
-            newList.add("LD" + mostNeighboursNode +"!");
+            newList.add("LD " + mostNeighboursNode.getKey() +"!");
             MachLine machLine = new MachLine(newList);
             CODE.add(CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).get(0),machLine);
 
@@ -494,7 +496,6 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 }
             }
         }
-
 
     }
 
