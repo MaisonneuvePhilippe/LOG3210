@@ -55,6 +55,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         compute_machineCode(); // generate the machine code from the CODE array (the CODE array should be transformed
         compute_LifeVar();
         compute_NextUse();
+        doReduce();
 
         for (int i = 0; i < CODE.size(); i++) // print the output
             m_writer.println(CODE.get(i));
@@ -157,6 +158,8 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         //nothing to do here
         return "@" + node.getValue();
     }
+
+
 
     public void addMachineLine(String assigned, String left, String right, String op) {
         List<String> newList = new ArrayList<>();
@@ -506,5 +509,32 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         return list;
     }
 
+    private void doReduce() {
+        ArrayList<MachLine> copy = (ArrayList<MachLine>) CODE.clone();
+        CODE.clear();
+
+        for (MachLine line : copy) {
+            if (line.line.get(0).substring(0,3).equals(OP.get("+"))) {
+                String register = line.line.get(0).substring(4,6);
+                if (line.line.get(0).substring(12,14).equals(register) && line.line.get(0).substring(8,10).equals("#0")) {
+                    continue;
+                }
+                if (line.line.get(0).substring(8,10).equals(register) && line.line.get(0).substring(12,14).equals("#0")) {
+                    continue;
+                }
+            }
+
+            if (line.line.get(0).substring(0,3).equals(OP.get("*"))) {
+                String register = line.line.get(0).substring(4,6);
+                if (line.line.get(0).substring(12,14).equals(register) && line.line.get(0).substring(8,10).equals("#1")) {
+                    continue;
+                }
+                if (line.line.get(0).substring(8,10).equals(register) && line.line.get(0).substring(12,14).equals("#1")) {
+                    continue;
+                }
+            }
+            CODE.add(line);
+        }
+    }
     // TODO: add any class you judge necessary, and explain them in the report. GOOD LUCK!
 }
