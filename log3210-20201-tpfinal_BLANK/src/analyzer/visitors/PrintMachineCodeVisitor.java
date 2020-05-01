@@ -386,7 +386,6 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 for (java.util.Map.Entry<String,String> entry: colourMap.entrySet()) {
                     rep = rep.replace(entry.getKey()+",",colourMap.get(entry.getKey())+",");
                     rep = rep.replaceAll(entry.getKey()+"$",colourMap.get(entry.getKey()));
-                    //rep = rep.replace("#0", colourMap.toString());
                 }
                 lines.line.set(0, rep);
             }
@@ -402,9 +401,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                     neighbours.addAll(prevNeighbours);
                     neighbours.remove(node);
                 }
-                grapheInterference.remove(node);
                 grapheInterference.put(node, new ArrayList<>(neighbours));
-
             }
         }
     }
