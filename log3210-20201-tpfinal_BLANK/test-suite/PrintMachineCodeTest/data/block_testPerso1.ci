@@ -1,0 +1,10 @@
+NUMBER_OF_REGISTER_AVAILABLE: 15
+
+a = 1
+b = 2
+a = a * 1
+b = b + 0
+a = a * 2
+
+
+return a,b

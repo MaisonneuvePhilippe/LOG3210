@@ -1,0 +1,19 @@
+[ADD R1, #0, #1
+// Life_IN  : []
+// Life_OUT : [@a]
+// Next_IN  :
+// Next_OUT : @a:[2]
+
+ADD R0, #0, #2
+// Life_IN  : [@a]
+// Life_OUT : [@a, @b]
+// Next_IN  : @a:[2]
+// Next_OUT : @a:[2], @b:[3]
+
+MUL R1, R1, #2
+// Life_IN  : [@a, @b]
+// Life_OUT : [@a, @b]
+// Next_IN  : @a:[4]
+// Next_OUT :
+
+]

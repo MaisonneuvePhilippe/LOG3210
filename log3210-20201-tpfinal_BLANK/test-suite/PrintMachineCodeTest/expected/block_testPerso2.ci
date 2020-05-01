@@ -1,0 +1,12 @@
+[ADD R0, #0, #1
+// Life_IN  : []
+// Life_OUT : []
+// Next_IN  :
+// Next_OUT : 
+
+ADD R0, #0, #2
+// Life_IN  : []
+// Life_OUT : [@b]
+// Next_IN  :
+// Next_OUT : @b:[2]
+]

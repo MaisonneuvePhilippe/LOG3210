@@ -1,0 +1,11 @@
+NUMBER_OF_REGISTER_AVAILABLE: 15
+
+a = 1
+b = 2
+c = 3
+d = 4
+a = a + d
+a = a + c
+a = a + b
+
+return a

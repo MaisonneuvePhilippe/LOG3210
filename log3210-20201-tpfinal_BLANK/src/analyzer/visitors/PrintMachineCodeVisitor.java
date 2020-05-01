@@ -52,10 +52,11 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         compute_NextUse(); // first Next-Use computation (should be recalled when machine code generation)
 
         colourGraph();
-        compute_machineCode(); // generate the machine code from the CODE array (the CODE array should be transformed
+
         compute_LifeVar();
         compute_NextUse();
         doReduce();
+        compute_machineCode();// generate the machine code from the CODE array (the CODE array should be transformed
 
         for (int i = 0; i < CODE.size(); i++) // print the output
             m_writer.println(CODE.get(i));
@@ -370,9 +371,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                     //rep = rep.replace("#0", colourMap.toString());
                 }
                 lines.line.set(0, rep);
-
             }
-
         }
     }
 
@@ -499,6 +498,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 }
             }
         }
+
 
     }
 

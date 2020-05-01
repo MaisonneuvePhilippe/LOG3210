@@ -1,0 +1,9 @@
+NUMBER_OF_REGISTER_AVAILABLE: 2
+
+a = 1
+b = 2
+a = b
+b = a
+
+
+return a, b
