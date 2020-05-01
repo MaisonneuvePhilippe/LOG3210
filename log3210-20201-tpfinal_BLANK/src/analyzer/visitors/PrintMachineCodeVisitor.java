@@ -53,6 +53,8 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
         colourGraph();
 
+        saveRemaining();
+
         compute_LifeVar();
         compute_NextUse();
         doReduce();
@@ -160,8 +162,6 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         return "@" + node.getValue();
     }
 
-
-
     public void addMachineLine(String assigned, String left, String right, String op) {
         List<String> newList = new ArrayList<>();
         if (!LOADED.contains(left) && !left.contains("#")) {
@@ -206,6 +206,21 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         CODE.add(machLine);
     }
 
+    public void saveRemaining() {
+        for (String modified: MODIFIED) {
+            if (!modified.contains("!") && !modified.contains("t")) {
+                List<String> newList = new ArrayList<>();
+                String address = colourMap.get(modified);
+                if (address == null) {
+                    address = modified;
+                }
+                newList.add("ST " + modified.replace("@", "") + ", " + address);
+                MachLine machLine = new MachLine(newList);
+                machLine.REF.add(modified);
+                CODE.add(machLine);
+            }
+        }
+    }
 
     private class NextUse {
         // NextUse class implementation: you can use it or redo it you're way
@@ -373,13 +388,12 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 lines.line.set(0, rep);
             }
         }
-    }
+            }
 
     public void compute_graph() {
         for (MachLine line : CODE) {
             for (String node : line.Next_OUT.nextuse.keySet()) {
-                HashSet<String> neighbours = new HashSet<>();
-                neighbours.addAll(line.Next_OUT.nextuse.keySet());
+                HashSet<String> neighbours = new HashSet<>(line.Next_OUT.nextuse.keySet());
                 if (grapheInterference.containsKey(node)) {
                     ArrayList<String> prevNeighbours = grapheInterference.get(node);
                     neighbours.addAll(prevNeighbours);
@@ -441,7 +455,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             int colourCount = 0;
             boolean finish = false;
             String colour = "R".concat(String.valueOf(colourCount));
-            while (finish == false) {
+            while (!finish) {
                 finish= true;
                 for (String neighbour : node.getValue()) {
 
@@ -478,10 +492,10 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             newList.add("ST " + mostNeighboursNode.getKey().replace("@","") +", "+ mostNeighboursNode.getKey());
             MachLine machLine = new MachLine(newList);
             CODE.add(first+1,machLine);
-
+            MODIFIED.remove(mostNeighboursNode.getKey());
         }
 
-        if (!CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).isEmpty()){
+        if (CODE.get(first).Next_OUT.nextuse.containsKey(mostNeighboursNode.getKey()) && !CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).isEmpty()){
 
             List<String> newList = new ArrayList<>();
             newList.add("LD " + mostNeighboursNode.getKey() +"!");
