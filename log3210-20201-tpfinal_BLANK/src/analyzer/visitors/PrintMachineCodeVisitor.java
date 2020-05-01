@@ -216,6 +216,9 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 }
                 newList.add("ST " + modified.replace("@", "") + ", " + address);
                 MachLine machLine = new MachLine(newList);
+                machLine.Life_IN.addAll(CODE.get(CODE.size() - 1).Life_OUT);
+                machLine.Life_OUT.addAll(machLine.Life_IN);
+                machLine.Life_OUT.remove(modified);
                 machLine.REF.add(modified);
                 CODE.add(machLine);
             }
@@ -456,9 +459,8 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             boolean finish = false;
             String colour = "R".concat(String.valueOf(colourCount));
             while (!finish) {
-                finish= true;
+                finish = true;
                 for (String neighbour : node.getValue()) {
-
                     if (colourMap.containsKey(neighbour) && colourMap.get(neighbour).equals(colour)) {
                         colourCount++;
                         colour = "R".concat(String.valueOf(colourCount));
@@ -467,7 +469,6 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
                 }
             }
             colourMap.put(node.getKey(), colour);
-
         }
 
     }
@@ -491,6 +492,10 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             List<String> newList = new ArrayList<>();
             newList.add("ST " + mostNeighboursNode.getKey().replace("@","") +", "+ mostNeighboursNode.getKey());
             MachLine machLine = new MachLine(newList);
+            machLine.REF.add(mostNeighboursNode.getKey());
+            machLine.Life_IN.addAll(CODE.get(first).Life_OUT);
+            machLine.Life_OUT.addAll(machLine.Life_IN);
+            machLine.Life_OUT.remove(mostNeighboursNode.getKey());
             CODE.add(first+1,machLine);
             MODIFIED.remove(mostNeighboursNode.getKey());
         }
