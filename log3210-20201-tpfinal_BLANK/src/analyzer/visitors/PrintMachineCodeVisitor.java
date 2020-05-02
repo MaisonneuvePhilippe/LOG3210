@@ -208,13 +208,13 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
 
     public void saveRemaining() {
         for (String modified: MODIFIED) {
-            if (!modified.contains("!") && !modified.contains("t")) {
+            if (!modified.contains("t")) {
                 List<String> newList = new ArrayList<>();
                 String address = colourMap.get(modified);
                 if (address == null) {
                     address = modified;
                 }
-                newList.add("ST " + modified.replace("@", "") + ", " + address);
+                newList.add("ST " + modified.replace("@", "").replace("!", "") + ", " + address);
                 MachLine machLine = new MachLine(newList);
                 machLine.Life_IN.addAll(CODE.get(CODE.size() - 1).Life_OUT);
                 machLine.Life_OUT.addAll(machLine.Life_IN);
@@ -425,8 +425,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
             for (Map.Entry<String, ArrayList<String>> node : grapheInterference.entrySet()) {
 
                 int nbNeighbours = node.getValue().size();
-
-                if (nbNeighbours > mostNeighboursNode.getValue().size() && nbNeighbours < reg) {
+                if (nbNeighbours > mostNeighboursNode.getValue().size() && nbNeighbours < reg && node.getKey().compareToIgnoreCase(mostNeighboursNode.getKey()) < 0) {
                     mostNeighboursNode = node;
                     break;
                 }
@@ -477,7 +476,7 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         mostNeighboursNode = grapheInterference.entrySet().iterator().next();
 
 
-        for(MachLine machLine :CODE){
+        for(MachLine machLine: CODE){
             if (machLine.Life_IN.contains(mostNeighboursNode.getKey()) && !machLine.line.get(0).contains("LD") && !machLine.line.get(0).contains("LD")) {
                 break;
             }
@@ -500,17 +499,29 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         if (CODE.get(first).Next_OUT.nextuse.containsKey(mostNeighboursNode.getKey()) && !CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).isEmpty()){
 
             List<String> newList = new ArrayList<>();
-            newList.add("LD " + mostNeighboursNode.getKey() +"!");
+
+            newList.add("LD " + mostNeighboursNode.getKey() + ", " + mostNeighboursNode.getKey().replace("@", ""));
             MachLine machLine = new MachLine(newList);
-            CODE.add(CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).get(0),machLine);
+            CODE.add(CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).get(0), machLine);
+
+            ArrayList<Integer> toRemove = new ArrayList<>();
 
             if (CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()) != null) {
                 for (int i = CODE.get(first).Next_OUT.nextuse.get(mostNeighboursNode.getKey()).get(0); i < CODE.size(); i++) {
                     if (CODE.get(i).line.get(0).contains("ST")) {
-                        CODE.remove(i);
-                    } else if (CODE.get(i).line.get(0).contains(mostNeighboursNode.toString())) {
-                        CODE.get(i).line.get(0).replace(mostNeighboursNode.toString(), mostNeighboursNode + "!");
+                        toRemove.add(i);
+                    } else if (CODE.get(i).line.get(0).contains(mostNeighboursNode.getKey())) {
+                        String replacement = CODE.get(i).line.get(0).replace(mostNeighboursNode.getKey(), mostNeighboursNode.getKey() + "!");
+                        CODE.get(i).line.set(0, replacement);
+                        String[] parts = CODE.get(i).line.get(0).split(" ");
+                        if (!MODIFIED.contains(parts[1].replace(",", ""))) {
+                            MODIFIED.add(mostNeighboursNode.getKey() + "!");
+                        }
                     }
+                }
+
+                for (Integer pos: toRemove) {
+                    CODE.remove(pos.intValue());
                 }
             }
         }
@@ -530,22 +541,25 @@ public class PrintMachineCodeVisitor implements ParserVisitor {
         CODE.clear();
 
         for (MachLine line : copy) {
-            if (line.line.get(0).substring(0,3).equals(OP.get("+"))) {
-                String register = line.line.get(0).substring(4,6);
-                if (line.line.get(0).substring(12,14).equals(register) && line.line.get(0).substring(8,10).equals("#0")) {
+            String[] parts = line.line.get(0).split(" ");
+            parts[1] = parts[1].replace(",", "");
+            parts[2] = parts[2].replace(",", "");
+            if (parts[0].equals(OP.get("+"))) {
+                String register = parts[1];
+                if (parts[3].equals(register) && parts[2].equals("#0")) {
                     continue;
                 }
-                if (line.line.get(0).substring(8,10).equals(register) && line.line.get(0).substring(12,14).equals("#0")) {
+                if (parts[2].equals(register) && parts[3].equals("#0")) {
                     continue;
                 }
             }
 
-            if (line.line.get(0).substring(0,3).equals(OP.get("*"))) {
-                String register = line.line.get(0).substring(4,6);
-                if (line.line.get(0).substring(12,14).equals(register) && line.line.get(0).substring(8,10).equals("#1")) {
+            if (parts[0].equals(OP.get("*"))) {
+                String register = parts[1];
+                if (parts[3].equals(register) && parts[2].equals("#1")) {
                     continue;
                 }
-                if (line.line.get(0).substring(8,10).equals(register) && line.line.get(0).substring(12,14).equals("#1")) {
+                if (parts[2].equals(register) && parts[3].equals("#1")) {
                     continue;
                 }
             }
